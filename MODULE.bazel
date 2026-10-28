@@ -1,0 +1,13 @@
+module(name = "prototypes")
+
+bazel_dep(name = "rules_cc", version = "0.2.27")
+bazel_dep(name = "googletest", version = "1.18.0")
+bazel_dep(name = "google_benchmark", version = "1.10.0")
+
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+
+git_override(
+    module_name = "hedron_compile_commands",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+    commit = "7fe1eab26d2b8eeb5e1c6a2f38bddb001e3f9696",
+)
