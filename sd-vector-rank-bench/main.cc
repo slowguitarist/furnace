@@ -53,8 +53,9 @@ int main(int argc, char** argv) {
     for (auto _ : st) {
       for (const kmer_t kmer : pr) {
         const std::size_t r = rank(kmer);
-        auto op = (r < card && select(r + 1) == kmer) ? std::make_optional(r) : std::nullopt;
+        auto op = (r < kset.size() && select(r + 1) == kmer) ? std::make_optional(r) : std::nullopt;
         assert(op.has_value());
+        FORCE_LINK(op);
       }
     }
   });
@@ -62,9 +63,10 @@ int main(int argc, char** argv) {
   benchmark::RegisterBenchmark("hash-present", [&](benchmark::State& st) {
     for (auto _ : st) {
       for (const kmer_t kmer : pr) {
-        if (kmer < card && kset[kmer] == 1) {
+        if (kmer < kset.size() && kset[kmer] == 1) {
           auto op = hash.find(kmer);
           assert(op.has_value());
+          FORCE_LINK(op);
         }
       } 
     }
@@ -74,7 +76,7 @@ int main(int argc, char** argv) {
     for (auto _ : st) {
       for (const kmer_t kmer : ab) {
         const std::size_t r = rank(kmer);
-        auto op = (r < card && select(r + 1) == kmer) ? std::make_optional(r) : std::nullopt;
+        auto op = (r < kset.size() && select(r + 1) == kmer) ? std::make_optional(r) : std::nullopt;
         FORCE_LINK(op);
       }
     }
@@ -83,7 +85,7 @@ int main(int argc, char** argv) {
   benchmark::RegisterBenchmark("hash-maybe-absent", [&](benchmark::State& st) {
     for (auto _ : st) {
       for (const kmer_t kmer : ab) {
-        if (kmer < card && kset[kmer] == 1) {
+        if (kmer < kset.size() && kset[kmer] == 1) {
           auto op = hash.find(kmer);
           FORCE_LINK(op);
         }
