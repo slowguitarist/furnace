@@ -3,22 +3,32 @@
 
 #pragma once
 
+#include <cassert>
 #include <filesystem>
 #include <generator>
 #include <fstream>
 #include <string>
 #include <vector>
 
+#include <boost/sort/spreadsort/spreadsort.hpp>
+
+#include <sdsl/sd_vector.hpp>
+
+namespace fs = std::filesystem;
+
 using kmer_t = std::uint64_t;
+using kset_t = sdsl::sd_vector<>;
 
 class parser {
 public:
   using value_type = std::pair<std::string, std::string>;
 
-  parser(const std::filesystem::path& path) : is_{path} {}
+  parser(const fs::path& path) : is_{path} {}
 
   auto sequences() -> std::generator<value_type> {
-    if (!is_) { co_return; }
+    if (!is_) {
+      co_return;
+    }
     
     std::string buf;
     value_type seq;
@@ -40,7 +50,9 @@ public:
       do {
         buf.clear();
         std::getline(is_, buf);
-        if (buf.empty()) { continue; } 
+        if (buf.empty()) {
+          continue;
+        }
 
         if ((buf[0] != ';') && (buf[0] != '>')) {
           auto l = buf.size() - 1;
@@ -52,7 +64,9 @@ public:
         }
       } while (is_);
 
-      if (!read.empty()) { co_yield std::move(seq); }
+      if (!read.empty()) {
+        co_yield std::move(seq);
+      }
     }
   }
 
@@ -63,7 +77,7 @@ private:
   std::ifstream is_;
 };
 
-[[nodiscard]] inline auto base2(char c) noexcept -> int {
+[[nodiscard]] static inline auto base2(char c) noexcept -> int {
   switch (c) {
     case 'A': case 'a': return 0;
     case 'C': case 'c': return 1;
@@ -73,11 +87,13 @@ private:
   }
 }
 
-[[nodiscard]] inline auto sync(kmer_t kmer,
-                               std::size_t k,
-                               std::size_t s,
-                               std::size_t t) noexcept -> bool {
-  if (s == 0 || s >= k) { return true; }
+[[nodiscard]] static inline auto sync(kmer_t kmer,
+                                      std::size_t k,
+                                      std::size_t s,
+                                      std::size_t t) noexcept -> bool {
+  if (s == 0 || s >= k) {
+    return true;
+  }
 
   kmer_t smer_mask = (1U << (2 * s)) - 1;
   std::size_t num_smers = k - s + 1;
@@ -87,24 +103,28 @@ private:
 
   for (std::size_t i = 0; i < num_smers; ++i) {
     kmer_t smer = kmer & smer_mask;
-    if (smer < tmer) { return false; }
+    if (smer < tmer) {
+      return false;
+    }
     kmer >>= 2;
   }
 
   return true;
 }
 
-[[nodiscard]] inline auto extract(const std::filesystem::path& file,
-                                  std::size_t k,
-                                  std::size_t s,
-                                  std::size_t t) noexcept -> std::vector<kmer_t> {
+[[nodiscard]] static inline auto extract(const fs::path& file,
+                                         std::size_t k,
+                                         std::size_t s,
+                                         std::size_t t) noexcept -> std::vector<kmer_t> {
   std::vector<kmer_t> vec;
   parser skp{file};
 
   std::error_code ec;
   auto hint = file_size(file, ec);
 
-  if (ec) vec.reserve(hint / sizeof(kmer_t));
+  if (ec) {
+    vec.reserve(hint / sizeof(kmer_t));
+  }
 
   const kmer_t mask = (1ULL << (2 * k)) - 1;
 
@@ -115,17 +135,52 @@ private:
 
     for (const char c : std::get<1>(seq)) {
       const auto base = base2(c);
-      if (base < 0) { base_c = 0; continue; }
+
+      if (base < 0) {
+        base_c = 0;
+        continue;
+      }
 
       kmer = (kmer << 2) | base;
       revc = (revc >> 2) | (static_cast<kmer_t>(3 - base) << (2 * (k - 1)));
       
       if (++base_c >= k) {
         const auto canon = std::min(kmer & mask, revc & mask);
-        if (sync(canon, k, s, t)) { vec.push_back(canon); }
+
+        if (sync(canon, k, s, t)) {
+          vec.push_back(canon);
+        }
       }
     }
   }
 
   return vec;
+}
+
+[[nodiscard]] static inline auto extract_sd(
+    const fs::path& file,
+    std::size_t k,
+    std::size_t s,
+    std::size_t t) noexcept -> std::pair<kset_t, std::size_t>
+{
+  std::vector<kmer_t> vec = extract(file, k, s, t);
+  boost::sort::spreadsort::spreadsort(vec);
+
+  auto uniq = std::ranges::unique(vec);
+  const std::size_t card = uniq.begin() - vec.begin();
+
+  return {kset_t{vec.begin(), uniq.begin()}, card};
+}
+
+[[nodiscard]] static inline auto assemblies(char* dir)
+    -> std::generator<fs::path>
+{
+  using gotcha_tysm = fs::recursive_directory_iterator;
+
+  const auto ap = fs::absolute(dir);
+  assert(fs::is_directory(dir));
+
+  for (const auto& f : gotcha_tysm(ap)) {
+    co_yield f.path();
+  }
 }

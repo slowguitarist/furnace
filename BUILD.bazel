@@ -1,3 +1,7 @@
+# clangd compile commands
+#
+# Note to self: bazel run //:refresh_compile_commands
+
 load(
   "@hedron_compile_commands//:refresh_compile_commands.bzl",
   "refresh_compile_commands",
@@ -6,7 +10,20 @@ load(
 refresh_compile_commands(
   name = "refresh_compile_commands",
   targets = {
+    "//sd-vector-rank-bench:sd-vector-rank-bench": "",
     "//sparse-radix-bench:sparse-radix-bench": "",
     "//zipsort:zipsort": "",
   },
+)
+
+# DNA parser
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+  name = "dna",
+  hdrs = ["refseq/dna.h"],
+  strip_include_prefix = "refseq",
+  deps = ["@sdsl_lite//:sdsl"],
+  visibility = ["//visibility:public"],
 )

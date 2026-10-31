@@ -1,0 +1,23 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+  name = "datasketches",
+  hdrs = glob([
+    "common/include/**/*.hpp",
+    "cpc/include/**/*.hpp",
+    "fi/include/**/*.hpp",
+    "hll/include/**/*.hpp",
+    "kll/include/**/*.hpp",
+    "theta/include/**/*.hpp",
+  ]),
+  includes = [
+    "common/include",
+    "cpc/include",
+    "fi/include",
+    "hll/include",
+    "kll/include",
+    "theta/include",
+  ],
+)

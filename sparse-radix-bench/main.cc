@@ -1,4 +1,4 @@
-#include "dna.h"
+#include "refseq/dna.h"
 
 #include <filesystem>
 #include <print>
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
   const fs::path f = fs::absolute(argv[1]);
 
-  // Note to self: pass path as "$PWD/sparse-radix-bench/seq/"
+  // Note to self: pass path as "$PWD/refseq/fasta"
   if (!fs::is_directory(f)) {
     std::println("Not dir: {}", argv[1]);
     return 1337;
