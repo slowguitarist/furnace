@@ -1,5 +1,4 @@
 // Quick and handy FASTA syncmer extractor.
-// Does not sort / deduplicate because this is being benchmarked.
 
 #pragma once
 
@@ -7,12 +6,23 @@
 #include <filesystem>
 #include <generator>
 #include <fstream>
+#include <ranges>
 #include <string>
 #include <vector>
 
 #include <boost/sort/spreadsort/spreadsort.hpp>
 
 #include <sdsl/sd_vector.hpp>
+
+#define RM_SEQ_DIR_ARG()                                                  \
+  do {                                                                    \
+    for (int iii = 1; iii < argc - 1; ++iii) argv[iii] = argv[iii + 1];   \
+    argv[--argc] = nullptr;                                               \
+  } while (0);
+
+template<class T> void dust(const T&) {}
+
+#define FORCE_LINK(x) { void* volatile ddd = &(x); dust(ddd); }
 
 namespace fs = std::filesystem;
 
@@ -112,20 +122,12 @@ private:
   return true;
 }
 
-[[nodiscard]] static inline auto extract(const fs::path& file,
-                                         std::size_t k,
-                                         std::size_t s,
-                                         std::size_t t) noexcept -> std::vector<kmer_t> {
-  std::vector<kmer_t> vec;
+static inline void parse_file(const fs::path& file,
+                              std::size_t k,
+                              std::size_t s,
+                              std::size_t t,
+                              std::vector<kmer_t>& dst) {
   parser skp{file};
-
-  std::error_code ec;
-  auto hint = file_size(file, ec);
-
-  if (ec) {
-    vec.reserve(hint / sizeof(kmer_t));
-  }
-
   const kmer_t mask = (1ULL << (2 * k)) - 1;
 
   for (const auto& seq : skp.sequences()) {
@@ -148,11 +150,28 @@ private:
         const auto canon = std::min(kmer & mask, revc & mask);
 
         if (sync(canon, k, s, t)) {
-          vec.push_back(canon);
+          dst.push_back(canon);
         }
       }
     }
   }
+}
+
+[[nodiscard]] static inline auto extract(const fs::path& file,
+                                         std::size_t k,
+                                         std::size_t s,
+                                         std::size_t t) noexcept -> std::vector<kmer_t> {
+  std::vector<kmer_t> vec;
+  parser skp{file};
+
+  std::error_code ec;
+  auto hint = file_size(file, ec);
+
+  if (ec) {
+    vec.reserve(hint / sizeof(kmer_t));
+  }
+
+  parse_file(file, k, s, t, vec);
 
   return vec;
 }
@@ -172,15 +191,37 @@ private:
   return {kset_t{vec.begin(), uniq.begin()}, card};
 }
 
-[[nodiscard]] static inline auto assemblies(char* dir)
+[[nodiscard]] static inline auto assemblies(const char* dir)
     -> std::generator<fs::path>
 {
   using gotcha_tysm = fs::recursive_directory_iterator;
 
   const auto ap = fs::absolute(dir);
-  assert(fs::is_directory(dir));
+  assert(fs::is_directory(ap));
 
   for (const auto& f : gotcha_tysm(ap)) {
     co_yield f.path();
   }
+}
+
+using unique_range = std::ranges::borrowed_subrange_t<std::vector<kmer_t>&>;
+
+[[nodiscard]] static inline auto extract_master(
+    const char* dir,
+    std::size_t k,
+    std::size_t s,
+    std::size_t t) noexcept -> std::tuple<std::vector<kmer_t>, unique_range, std::size_t>
+{
+  std::vector<kmer_t> master;
+
+  for (const auto path : assemblies(dir)) {
+    parse_file(path, k, s, t, master);
+  }
+
+  boost::sort::spreadsort::spreadsort(master);
+
+  auto uniq = std::ranges::unique(master);
+  const std::size_t card = uniq.begin() - master.begin();
+
+  return {std::move(master), uniq, card};
 }

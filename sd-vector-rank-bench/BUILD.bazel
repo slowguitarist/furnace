@@ -3,9 +3,11 @@ load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 cc_binary(
   name = "sd-vector-rank-bench",
   srcs = ["main.cc"],
+  linkopts = ["-ltbb"],
   deps = [
     "//:dna",
     "@sdsl_lite//:sdsl",
-    "@datasketches_cpp//:datasketches",
+    "@bbhash//:bbhash",
+    "@google_benchmark//:benchmark",
   ],
 )
