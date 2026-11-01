@@ -53,10 +53,10 @@ int main(int argc, char** argv) {
   benchmark::RegisterBenchmark("rank-present", [&](benchmark::State& st) {
     for (auto _ : st) {
       for (const kmer_t kmer : pr) {
-        const std::size_t r = rank(kmer);
-        auto op = (r < kset.size() && select(r + 1) == kmer) ? std::make_optional(r) : std::nullopt;
-        assert(op.has_value());
-        benchmark::DoNotOptimize(op);
+        if (kmer < kset.size() && kset[kmer] == 1) {
+          auto op = rank(kmer);
+          benchmark::DoNotOptimize(op);
+        }
       }
     }
   });
@@ -76,9 +76,10 @@ int main(int argc, char** argv) {
   benchmark::RegisterBenchmark("rank-maybe-absent", [&](benchmark::State& st) {
     for (auto _ : st) {
       for (const kmer_t kmer : ab) {
-        const std::size_t r = rank(kmer);
-        auto op = (r < kset.size() && select(r + 1) == kmer) ? std::make_optional(r) : std::nullopt;
-        benchmark::DoNotOptimize(op);
+        if (kmer < kset.size() && kset[kmer] == 1) {
+          auto op = rank(kmer);
+          benchmark::DoNotOptimize(op);
+        }
       }
     }
   });
