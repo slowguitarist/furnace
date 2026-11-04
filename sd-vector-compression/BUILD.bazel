@@ -1,0 +1,11 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
+cc_binary(
+  name = "sd-vector-compression",
+  srcs = ["main.cc"],
+  deps = [
+    "//:dna",
+    "@sdsl_lite//:sdsl",
+    "@cereal//:cereal",
+  ],
+)

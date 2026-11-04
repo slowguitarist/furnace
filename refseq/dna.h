@@ -191,9 +191,7 @@ static inline void parse_file(const fs::path& file,
   return {kset_t{vec.begin(), uniq.begin()}, card};
 }
 
-[[nodiscard]] static inline auto assemblies(const char* dir)
-    -> std::generator<fs::path>
-{
+[[nodiscard]] static inline auto assemblies(const char* dir) -> std::generator<fs::path> {
   using gotcha_tysm = fs::recursive_directory_iterator;
 
   const auto ap = fs::absolute(dir);
@@ -205,13 +203,12 @@ static inline void parse_file(const fs::path& file,
 }
 
 using unique_range = std::ranges::borrowed_subrange_t<std::vector<kmer_t>&>;
+using sorted_seq = std::tuple<std::vector<kmer_t>, unique_range, std::size_t>;
 
-[[nodiscard]] static inline auto extract_master(
-    const char* dir,
-    std::size_t k,
-    std::size_t s,
-    std::size_t t) noexcept -> std::tuple<std::vector<kmer_t>, unique_range, std::size_t>
-{
+[[nodiscard]] static inline auto extract_master(const char* dir,
+                                                std::size_t k,
+                                                std::size_t s,
+                                                std::size_t t) noexcept -> sorted_seq {
   std::vector<kmer_t> master;
 
   for (const auto path : assemblies(dir)) {
@@ -224,4 +221,18 @@ using unique_range = std::ranges::borrowed_subrange_t<std::vector<kmer_t>&>;
   const std::size_t card = uniq.begin() - master.begin();
 
   return {std::move(master), uniq, card};
+}
+
+[[nodiscard]] static inline auto extract_all(
+    const char* dir,
+    std::size_t k,
+    std::size_t s,
+    std::size_t t) noexcept -> std::generator<std::vector<kmer_t>>
+{
+  for (const auto path : assemblies(dir)) {
+    std::vector vec = extract(path, k, s, t);
+    boost::sort::spreadsort::spreadsort(vec);
+    vec.erase(std::ranges::unique(vec).begin(), vec.end());
+    co_yield vec;
+  }
 }

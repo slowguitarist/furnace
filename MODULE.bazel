@@ -54,3 +54,12 @@ git_repository(
   commit = "e93a661a49c73776658499caeac0f61c900b1210",
   build_file = "@//third-party:bbhash.bazel",
 )
+
+# Cereal
+
+http_archive(
+  name = "cereal",
+  urls = ["https://github.com/USCiLab/cereal/archive/refs/tags/v1.3.2.tar.gz"],
+  strip_prefix = "cereal-1.3.2",
+  build_file = "@//third-party:cereal.bazel",
+)

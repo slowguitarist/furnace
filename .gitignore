@@ -3,3 +3,4 @@ bazel-*
 target/
 compile_commandss.json
 .cache
+*.tmp
