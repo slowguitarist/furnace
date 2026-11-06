@@ -10,6 +10,7 @@ load(
 refresh_compile_commands(
   name = "refresh_compile_commands",
   targets = {
+    "//lazy-mergesort:lazy-mergesort": "",
     "//sd-vector-compression:sd-vector-compression": "",
     "//sd-vector-rank-bench:sd-vector-rank-bench": "",
     "//sparse-radix-bench:sparse-radix-bench": "",

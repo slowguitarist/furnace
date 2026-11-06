@@ -20,10 +20,6 @@
     argv[--argc] = nullptr;                                               \
   } while (0);
 
-template<class T> void dust(const T&) {}
-
-#define FORCE_LINK(x) { void* volatile ddd = &(x); dust(ddd); }
-
 namespace fs = std::filesystem;
 
 using kmer_t = std::uint64_t;
