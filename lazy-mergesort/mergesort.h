@@ -238,7 +238,12 @@ struct intermediate {
   std::vector<seq_view> seq;
 };
 
-constexpr std::string_view temp_dir = "tmp";
+inline auto get_temp_dir() -> fs::path {
+  if (const char* env_dir = std::getenv("BUILD_WORKING_DIRECTORY")) {
+    return fs::path(env_dir) / "tmp";
+  }
+  return fs::path("tmp");
+}
 
 class file_cart {
   static constexpr std::size_t max_len = 8;
@@ -387,7 +392,7 @@ inline void worker(
       im.parts.emplace_back(kmer_buf.size(), label);
     }
     
-    fs::path file = fs::path(std::string(temp_dir)) / label;
+    fs::path file = get_temp_dir() / label;
 
     os.clear();
     os.open(file, std::ios::binary | std::ios::trunc);
@@ -432,7 +437,7 @@ inline auto convert_all_files(
 
   std::size_t def_workers = tbb::info::default_concurrency();
 
-  fs::create_directory(temp_dir);
+  fs::create_directory(get_temp_dir());
 
   repr.names.reserve(min_sum_of_filename_sizes(files));
   repr.seq.reserve(files);
