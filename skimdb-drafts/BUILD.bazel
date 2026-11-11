@@ -15,6 +15,7 @@ cc_binary(
     "@bbhash//:bbhash",
     "@sdsl_lite//:sdsl",
     "@cereal//:cereal",
-    "@datasketches_cpp//:datasketches"
+    "@datasketches_cpp//:datasketches",
+    "//:zipsort",
   ],
 )

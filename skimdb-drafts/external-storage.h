@@ -3,6 +3,7 @@
 #include "refseq/dna.h"
 #include "definitions.h"
 #include "utilities.h"
+#include "zipsort/zipsort.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -579,3 +580,56 @@ private:
 
   std::exception_ptr cancellation = nullptr;
 };
+
+
+static inline void build_index(
+    fakedb& db,
+    external_storage& kmers,
+    std::vector<kview>& kv,
+    std::future<void> master_set_builder,
+    std::uint32_t win_size = 0
+) {
+  std::uint32_t n = kv.size();
+
+  if (n < 3 || kv.size() > std::numeric_limits<std::uint32_t>::max()) {
+    throw std::runtime_error{std::format("fatal: too many kmers: {}", kv.size())};
+  }
+
+  win_size = win_size == 0 ? n - 1 : std::min(win_size, n - 1);
+
+  zipsort(std::execution::par, kv, db.sequences, [](const auto& a, const auto& b) {
+    return a.first.card > b.first.card;
+  });
+
+  kmers.fetch_starting_window();
+
+  std::vector<std::uint32_t> idx(win_size);
+
+  master_set_builder.get();
+
+  for (std::uint32_t i = 0, end = n - 2; i < end; ++i) {
+    std::uint32_t const ref_idx = i + 1;
+
+    idx.resize(std::min(win_size, n - ref_idx));
+    std::iota(idx.begin(), idx.end(), ref_idx);
+
+    auto [best_card, best_pos] = std::transform_reduce(
+        std::execution::par,
+        idx.begin(),
+        idx.end(),
+        std::pair(std::uint32_t{0}, ref_idx),
+        [](const auto a, const auto b) {
+          return a.first >= b.first ? a : b;
+        },
+        [&](std::uint32_t j) -> std::pair<std::uint32_t, std::uint32_t> {
+          return {kmers.base_intersect(j), j};
+        });
+
+    std::swap(kv[ref_idx], kv[best_pos]);
+    std::swap(db.sequences[ref_idx], db.sequences[best_pos]);
+
+    kmers.append_column(db, best_pos);
+  }
+
+  // Real database would need to be compressed here.
+}

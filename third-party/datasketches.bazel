@@ -13,6 +13,7 @@ cc_library(
     "hll/include/**/*.hpp",
     "kll/include/**/*.hpp",
     "theta/include/**/*.hpp",
+    "common/include/**/*.h",
   ]),
   includes = [
     "common/include",
