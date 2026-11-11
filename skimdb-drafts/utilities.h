@@ -84,7 +84,7 @@ public:
   public:
     inline auto next_filename() -> std::string {
       ++fid_[idx_];
-      if (--idx_ < 0 || fid_[idx_] > '~') {
+      if (--idx_ < 0) {
         idx_ = max_len - tid_len - 1;
       }
       return fid_;
