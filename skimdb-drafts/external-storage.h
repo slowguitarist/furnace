@@ -628,7 +628,7 @@ static inline void build_index(
     std::swap(kv[ref_idx], kv[best_pos]);
     std::swap(db.sequences[ref_idx], db.sequences[best_pos]);
 
-    kmers.append_column(db, best_pos);
+    kmers.append_column(db, i);
   }
 
   // Real database would need to be compressed here.
