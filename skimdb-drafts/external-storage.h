@@ -172,7 +172,9 @@ private:
   auto after_io(std::uint32_t idx, F&& def) const -> std::uint32_t {
     // Contract on future completion is strict; spurious wakeups
     // have already been accounted for by the implementation.
-    drdy_.get();
+    if (drdy_.valid()) {
+      drdy_.get();
+    }
 
     const kview::io_status st = view_[idx].state();
 
@@ -490,13 +492,13 @@ public:
    * @brief Consumes the kmer set and updates all database rows
    * for which that set contains the kmer.
    */
-  void append_column(fakedb& db, std::uint32_t seq) {
+  void append_column(fakedb& db, std::uint32_t bmi, std::size_t seq) {
     if (cancellation != nullptr) {
       // Rethrow inside main stack frame.
       std::rethrow_exception(cancellation);
     }
 
-    const auto [kset, card] = ring_.advance(seq);
+    const auto [kset, card] = ring_.advance(bmi);
 
     const select_type select{&kset};
     
@@ -628,7 +630,7 @@ static inline void build_index(
     std::swap(kv[ref_idx], kv[best_pos]);
     std::swap(db.sequences[ref_idx], db.sequences[best_pos]);
 
-    kmers.append_column(db, best_pos);
+    kmers.append_column(db, best_pos, i);
   }
 
   // Real database would need to be compressed here.
